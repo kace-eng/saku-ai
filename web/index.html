@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SakuAI — Otak Kedua</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#facc15">
+<style>
+* { box-sizing: border-box; font-family: 'Courier New', monospace; }
+body { background: #fdf6e3; background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px); background-size: 18px 18px; color: #111; padding: 14px 14px 90px; max-width: 480px; margin: auto; }
+.screen { display: none; animation: fadeIn 0.15s ease-in; }
+.screen.active { display: block; }
+@keyframes fadeIn { from { opacity: 0.4; } to { opacity: 1; } }
+.card { background: #fff; border: 3px solid #111; border-radius: 16px; box-shadow: 5px 5px 0 #111; padding: 16px; margin-bottom: 16px; }
+.badge { display: inline-block; background: #facc15; border: 2px solid #111; border-radius: 8px; padding: 3px 9px; font-weight: 900; font-size: 10px; box-shadow: 2px 2px 0 #111; margin-bottom: 8px; }
+h1 { font-size: 20px; margin: 0 0 12px; text-transform: uppercase; font-weight: 900; }
+.stat-box { background: #67e8f9; border: 3px solid #111; border-radius: 12px; padding: 14px; text-align: center; box-shadow: 4px 4px 0 #111; margin-bottom: 12px; }
+.stat-val { font-size: 24px; font-weight: 900; margin-top: 4px; }
+.grid-2 { display: flex; gap: 10px; margin-bottom: 12px; }
+.mini-card { flex: 1; background: #fef08a; border: 3px solid #111; border-radius: 12px; padding: 12px; text-align: center; box-shadow: 3px 3px 0 #111; cursor: pointer; }
+.mini-num { font-size: 20px; font-weight: 900; }
+textarea { width: 100%; padding: 12px; border: 3px solid #111; border-radius: 10px; background: #fff; font-weight: bold; font-size: 13px; outline: none; resize: none; }
+.row-btns { display: flex; gap: 10px; margin-top: 10px; }
+.btn-pink { flex: 2; background: #f472b6; border: 3px solid #111; border-radius: 10px; padding: 11px; font-weight: 900; font-size: 11px; cursor: pointer; box-shadow: 3px 3px 0 #111; text-align: center; }
+.btn-voice { flex: 1; background: #e879f9; border: 3px solid #111; border-radius: 10px; padding: 11px; font-weight: 900; font-size: 11px; cursor: pointer; box-shadow: 3px 3px 0 #111; }
+.btn-green { width: 100%; background: #22c55e; border: 3px solid #111; border-radius: 10px; padding: 14px; margin-top: 12px; font-weight: 900; font-size: 13px; cursor: pointer; box-shadow: 4px 4px 0 #111; }
+.sub-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.sub-btn { flex: 1; padding: 9px; border: 3px solid #111; border-radius: 10px; background: #e5e7eb; font-weight: 900; font-size: 11px; cursor: pointer; box-shadow: 3px 3px 0 #111; }
+.sub-btn.active { background: #facc15; }
+.rem-item { border: 3px solid #111; border-radius: 12px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 3px 3px 0 #111; gap: 8px; }
+.urgent { background: #f87171; } .soon { background: #fde047; } .safe { background: #86efac; } .note-bg { background: #e0f2fe; }
+.btn-done { background: #fff; border: 2px solid #111; border-radius: 8px; padding: 6px 10px; font-weight: 900; font-size: 10px; cursor: pointer; box-shadow: 2px 2px 0 #111; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th, td { border: 2px solid #111; padding: 6px; text-align: left; }
+th { background: #111; color: #fff; }
+.btn-csv { display: block; text-align: center; text-decoration: none; color: #111; background: #38bdf8; border: 3px solid #111; border-radius: 10px; padding: 11px; margin-top: 12px; font-weight: 900; font-size: 12px; box-shadow: 3px 3px 0 #111; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: auto; background: #fff; border-top: 3px solid #111; display: flex; padding: 8px; gap: 6px; z-index: 99; }
+.nav-item { flex: 1; background: #f1f5f9; border: 2px solid #111; border-radius: 10px; padding: 8px 2px; font-weight: 900; font-size: 10px; text-align: center; cursor: pointer; box-shadow: 2px 2px 0 #111; }
+.nav-item.active { background: #facc15; transform: translateY(-2px); }
+</style>
+</head>
+<body>
+
+<div id="layer-home" class="screen active">
+  <div class="card">
+    <span class="badge">BERANDA • V3.0</span>
+    <h1>RINGKASAN HARI INI</h1>
+    <div style="display:flex;gap:6px;margin-bottom:12px;"><input type="text" id="tanya-db" placeholder="Tanya memori: Kapan ganti oli?" style="flex:1;padding:10px;border:3px solid #111;border-radius:10px;font-weight:bold;font-size:12px;"><button onclick="cariMemori()" style="background:#facc15;border:3px solid #111;border-radius:10px;padding:0 12px;font-weight:900;cursor:pointer;box-shadow:3px 3px 0 #111;">🔍</button></div><div id="hasil-memori" style="background:#e0f2fe;border:2px dashed #111;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;font-weight:bold;display:none;"></div><div class="stat-box">
+      <div style="font-size:11px;font-weight:900;">TOTAL PENGELUARAN</div>
+      <div class="stat-val" id="home-total">Rp 0</div>
+    </div>
+    <div class="grid-2">
+      <div class="mini-card" onclick="bukaLayer('layer-tasks', 'nav-tasks')">
+        <div class="mini-num" id="home-rem-count">0</div>
+        <div style="font-size:11px;font-weight:bold;">⏰ JADWAL AKTIF</div>
+      </div>
+      <div class="mini-card" style="background:#e0f2fe;" onclick="bukaLayer('layer-tasks', 'nav-tasks')">
+        <div class="mini-num" id="home-note-count">0</div>
+        <div style="font-size:11px;font-weight:bold;">📝 CATATAN MEMO</div>
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:900;margin-bottom:6px;">⚠️ PERINGATAN PALING DEKAT:</div>
+    <div id="home-urgent-box"></div>
+    <button class="btn-green" onclick="bukaLayer('layer-input', 'nav-input')">➕ CATAT / SCAN BARU</button>
+  </div>
+</div>
+
+<div id="layer-input" class="screen">
+  <div class="card">
+    <span class="badge">INPUT PINTAR AI</span>
+    <h1>TAMBAH DATA BARU</h1>
+    <textarea id="input-santai" rows="4" placeholder="Ketik santai: 'Ganti oli 65rb, ingatkan servis 2 bulan lagi' atau simpan ide catatan..."></textarea>
+    <div id="info-foto" style="font-size:11px;font-weight:bold;color:#be185d;margin-top:6px;display:none;"></div>
+    <div class="row-btns">
+      <label class="btn-pink">📷 SCAN STRUK / NOTA<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="siapkanFoto(this)"></label>
+      <button type="button" class="btn-voice" onclick="mulaiSuara()">🎤 SUARA</button>
+    </div>
+    <button class="btn-green" id="btn-kirim" onclick="prosesSemua()">⚡ PROSES OTOMATIS AI</button>
+    <div id="kotak-saran" style="background:#fef08a;border:2px dashed #111;border-radius:8px;padding:10px;margin-top:12px;font-size:12px;font-weight:bold;display:none;"></div>
+  </div>
+</div>
+
+<div id="layer-tasks" class="screen">
+  <div class="sub-tabs">
+    <button class="sub-btn active" id="sub-rem" onclick="gantiSub('rem')">⏰ PENGINGAT</button>
+    <button class="sub-btn" id="sub-note" onclick="gantiSub('note')">📝 CATATAN BEBAS</button>
+  </div>
+  <div id="panel-rem"></div>
+  <div id="panel-note" style="display:none;"></div>
+</div>
+
+<div id="layer-money" class="screen">
+  <div class="card">
+    <span class="badge">AUDIT KEUANGAN</span>
+    <h1>REKAP PENGELUARAN</h1>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Tgl</th><th>Kategori</th><th>Item</th><th>Nominal</th></tr></thead>
+        <tbody id="tabel-pengeluaran"></tbody>
+      </table>
+    </div>
+    <a href="/export-csv" class="btn-csv">📥 UNDUH EXCEL (.CSV)</a>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-home" onclick="bukaLayer('layer-home', 'nav-home')">🏠<br>BERANDA</div>
+  <div class="nav-item" id="nav-input" onclick="bukaLayer('layer-input', 'nav-input')">➕<br>INPUT AI</div>
+  <div class="nav-item" id="nav-tasks" onclick="bukaLayer('layer-tasks', 'nav-tasks')">⏰<br>JADWAL</div>
+  <div class="nav-item" id="nav-money" onclick="bukaLayer('layer-money', 'nav-money')">💸<br>KEUANGAN</div>
+</div>
+<script>
+let fotoBase64 = "";
+let fotoMime = "image/jpeg";
+
+function bukaLayer(idLayer, idNav) {
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(idLayer).classList.add('active');
+  document.getElementById(idNav).classList.add('active');
+}
+
+function gantiSub(tab) {
+  document.getElementById('panel-rem').style.display = tab === 'rem' ? 'block' : 'none';
+  document.getElementById('panel-note').style.display = tab === 'note' ? 'block' : 'none';
+  document.getElementById('sub-rem').classList.toggle('active', tab === 'rem');
+  document.getElementById('sub-note').classList.toggle('active', tab === 'note');
+}
+
+function siapkanFoto(input) {
+  const file = input.files;
+  if (!file) return;
+  fotoMime = file.type || "image/jpeg";
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    fotoBase64 = e.target.result.split(',');
+    const info = document.getElementById('info-foto');
+    info.style.display = 'block';
+    info.textContent = "📷 Foto siap: " + file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function mulaiSuara() {
+  const box = document.getElementById('input-santai');
+  box.focus();
+  alert("Ketuk ikon mikrofon (🎤) di keyboard HP Anda untuk mulai mendikte suara.");
+}
+
+async function cariMemori() { const q = document.getElementById("tanya-db").value; if(!q.trim()) return; const box = document.getElementById("hasil-memori"); box.style.display="block"; box.textContent="⏳ Mencari ingatan..."; const r = await fetch("/tanya-memori", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({pertanyaan:q})}); const d = await r.json(); box.textContent="🧠 " + d.jawaban; }
+async function muatData() {
+  const res = await fetch('/dashboard-data');
+  const data = await res.json();
+  const totalTxt = 'Rp ' + data.total_pengeluaran.toLocaleString('id-ID');
+  document.getElementById('home-total').textContent = totalTxt;
+  document.getElementById('home-rem-count').textContent = data.pengingat.length;
+  document.getElementById('home-note-count').textContent = data.catatan.length;
+
+  const urgentBox = document.getElementById('home-urgent-box');
+  if (!data.pengingat.length) {
+    urgentBox.innerHTML = '<div style="font-size:12px;font-weight:bold;padding:8px;background:#f1f5f9;border:2px solid #111;border-radius:8px;">Semua jadwal aman terkendali!</div>';
+  } else {
+    const top = data.pengingat;
+    urgentBox.innerHTML = `<div class="rem-item soon" style="margin-bottom:0;"><div><b>${top.judul}</b><br><span style="font-size:11px;">Target: ${top.jatuh_tempo} (${top.sisa_hari} hari lagi)</span></div></div>`;
+  }
+
+  document.getElementById('panel-rem').innerHTML = !data.pengingat.length
+    ? '<div class="card" style="font-size:12px;font-weight:bold;">Belum ada jadwal pengingat.</div>'
+    : data.pengingat.map(r => {
+        let kls = r.sisa_hari <= 1 ? 'urgent' : (r.sisa_hari <= 7 ? 'soon' : 'safe');
+        return `<div class="rem-item ${kls}"><div><b>${r.judul}</b><br><span style="font-size:11px;">${r.jatuh_tempo} (${r.sisa_hari} hari lagi)</span></div><button class="btn-done" onclick="aksi('/selesai-pengingat/${r.id}')">✔ SELESAI</button></div>`;
+      }).join('');
+
+  document.getElementById('panel-note').innerHTML = !data.catatan.length
+    ? '<div class="card" style="font-size:12px;font-weight:bold;">Belum ada catatan bebas.</div>'
+    : data.catatan.map(n => `<div class="rem-item note-bg"><div><span style="font-size:10px;">${n.tanggal}</span><br><b style="font-size:12px;">${n.isi}</b></div><button class="btn-done" onclick="aksi('/hapus-catatan/${n.id}')">🗑 HAPUS</button></div>`).join('');
+
+  document.getElementById('tabel-pengeluaran').innerHTML = data.pengeluaran.map(e => `<tr><td>${e.tanggal.slice(5)}</td><td><b>${e.kategori}</b></td><td>${e.keterangan}</td><td>Rp ${e.nominal.toLocaleString('id-ID')}</td></tr>`).join('');
+}
+
+async function prosesSemua() {
+  const teks = document.getElementById('input-santai').value;
+  if (!teks.trim() && !fotoBase64) return;
+  const btn = document.getElementById('btn-kirim');
+  const saranBox = document.getElementById('kotak-saran');
+  btn.textContent = "⏳ MEMPROSES...";
+  btn.disabled = true;
+
+  const res = await fetch('/catat-pintar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ teks, image_base64: fotoBase64, mime_type: fotoMime })
+  });
+  const data = await res.json();
+  btn.textContent = "⚡ PROSES OTOMATIS AI";
+  btn.disabled = false;
+
+  if (data.status === 'SUKSES') {
+    document.getElementById('input-santai').value = '';
+    fotoBase64 = '';
+    document.getElementById('info-foto').style.display = 'none';
+    saranBox.style.display = 'block';
+    saranBox.textContent = "🤖 " + (data.hasil.saran_singkat || "Tersimpan!");
+    await muatData();
+  } else {
+    alert(data.pesan);
+  }
+}
+
+async function aksi(url) {
+  await fetch(url, { method: 'POST' });
+  muatData();
+}
+
+muatData();
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }
+</script>
+</body>
+</html>
