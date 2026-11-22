@@ -76,7 +76,7 @@ def catat_pintar():
             if cek:
                 return jsonify({"status": "ERROR", "pesan": "GUARDRAIL: Foto nota ini sudah pernah dicatat sebelumnya!"})
 
-    teks_aman = engine.sanitize_privacy(teks_mentah) if teks_mentah else "Scan foto struk/nota"
+    teks_aman = engine.sanitize_privacy(teks_mentah) if teks_mentah else "Upload file atau foto nota"
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     hari_ini = date.today().strftime("%Y-%m-%d")
 
