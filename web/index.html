@@ -131,13 +131,27 @@ function gantiSub(tab) {
 function siapkanFoto(input) {
   const file = input.files;
   if (!file) return;
-  fotoMime = file.type || "image/jpeg";
+  const info = document.getElementById('info-foto');
+  info.style.display = 'block';
+  info.textContent = "⏳ Mengompres foto nota...";
+
   const reader = new FileReader();
   reader.onload = function(e) {
-    fotoBase64 = e.target.result.split(',');
-    const info = document.getElementById('info-foto');
-    info.style.display = 'block';
-    info.textContent = "📷 Foto siap: " + file.name;
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxW = 1024;
+      const scale = img.width > maxW ? maxW / img.width : 1;
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      fotoBase64 = dataUrl.split(',');
+      fotoMime = 'image/jpeg';
+      info.textContent = "📷 Foto nota siap diproses (" + Math.round(fotoBase64.length / 1024) + " KB)";
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -148,12 +162,25 @@ function mulaiSuara() {
   alert("Ketuk ikon mikrofon (🎤) di keyboard HP Anda untuk mulai mendikte suara.");
 }
 
-async function cariMemori() { const q = document.getElementById("tanya-db").value; if(!q.trim()) return; const box = document.getElementById("hasil-memori"); box.style.display="block"; box.textContent="⏳ Mencari ingatan..."; const r = await fetch("/tanya-memori", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({pertanyaan:q})}); const d = await r.json(); box.textContent="🧠 " + d.jawaban; }
+async function cariMemori() {
+  const q = document.getElementById("tanya-db").value;
+  if (!q.trim()) return;
+  const box = document.getElementById("hasil-memori");
+  box.style.display = "block";
+  box.textContent = "⏳ Mencari ingatan...";
+  const r = await fetch("/tanya-memori", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pertanyaan: q })
+  });
+  const d = await r.json();
+  box.textContent = "🧠 " + d.jawaban;
+}
+
 async function muatData() {
   const res = await fetch('/dashboard-data');
   const data = await res.json();
-  const totalTxt = 'Rp ' + data.total_pengeluaran.toLocaleString('id-ID');
-  document.getElementById('home-total').textContent = totalTxt;
+  document.getElementById('home-total').textContent = 'Rp ' + data.total_pengeluaran.toLocaleString('id-ID');
   document.getElementById('home-rem-count').textContent = data.pengingat.length;
   document.getElementById('home-note-count').textContent = data.catatan.length;
 
@@ -181,31 +208,37 @@ async function muatData() {
 
 async function prosesSemua() {
   const teks = document.getElementById('input-santai').value;
-  if (!teks.trim() && !fotoBase64) return;
+  if (!teks.trim() && !fotoBase64) {
+    alert("Ketik catatan atau ambil foto struk terlebih dahulu.");
+    return;
+  }
   const btn = document.getElementById('btn-kirim');
   const saranBox = document.getElementById('kotak-saran');
-  btn.textContent = "⏳ MEMPROSES...";
+  btn.textContent = "⏳ AI SEDANG MEMBACA...";
   btn.disabled = true;
 
-  const res = await fetch('/catat-pintar', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ teks, image_base64: fotoBase64, mime_type: fotoMime })
-  });
-  const data = await res.json();
+  try {
+    const res = await fetch('/catat-pintar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teks, image_base64: fotoBase64, mime_type: fotoMime })
+    });
+    const data = await res.json();
+    if (data.status === 'SUKSES') {
+      document.getElementById('input-santai').value = '';
+      fotoBase64 = '';
+      document.getElementById('info-foto').style.display = 'none';
+      saranBox.style.display = 'block';
+      saranBox.textContent = "🤖 " + (data.hasil.saran_singkat || "Berhasil diproses!");
+      await muatData();
+    } else {
+      alert(data.pesan);
+    }
+  } catch (err) {
+    alert("Gagal memproses foto/catatan: " + err);
+  }
   btn.textContent = "⚡ PROSES OTOMATIS AI";
   btn.disabled = false;
-
-  if (data.status === 'SUKSES') {
-    document.getElementById('input-santai').value = '';
-    fotoBase64 = '';
-    document.getElementById('info-foto').style.display = 'none';
-    saranBox.style.display = 'block';
-    saranBox.textContent = "🤖 " + (data.hasil.saran_singkat || "Tersimpan!");
-    await muatData();
-  } else {
-    alert(data.pesan);
-  }
 }
 
 async function aksi(url) {
