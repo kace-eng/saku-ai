@@ -81,7 +81,7 @@ th { background: #111; color: #fff; }
     <textarea id="input-santai" rows="4" placeholder="Ketik santai: 'Ganti oli 65rb, ingatkan servis 2 bulan lagi' atau simpan ide catatan..."></textarea>
     <div id="info-foto" style="font-size:11px;font-weight:bold;color:#be185d;margin-top:6px;display:none;"></div>
     <div class="row-btns">
-      <label class="btn-pink">📷 SCAN STRUK / NOTA<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="siapkanFoto(this)"></label>
+      <label class="btn-pink">📎 UPLOAD FILE / FOTO<input type="file" accept="image/*,.pdf,.txt,.csv" style="display:none;" onchange="siapkanFoto(this)"></label>
       <button type="button" class="btn-voice" onclick="mulaiSuara()">🎤 SUARA</button>
     </div>
     <button class="btn-green" id="btn-kirim" onclick="prosesSemua()">⚡ PROSES OTOMATIS AI</button>
@@ -123,6 +123,8 @@ th { background: #111; color: #fff; }
 <script>
 let fotoBase64 = "";
 let fotoMime = "image/jpeg";
+let teksFile = "";            // isi file .txt/.csv (disensor privasinya di server)
+const MAX_UPLOAD = 8 * 1024 * 1024;
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rp = n => 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
@@ -158,27 +160,58 @@ function gantiSub(tab) {
   document.getElementById('sub-note').classList.toggle('active', tab === 'note');
 }
 
-// Foto: perkecil dulu (maks 1280px, JPEG) supaya upload cepat & hemat kuota
+// Upload: foto (diperkecil), PDF, atau teks (.txt/.csv).
 function siapkanFoto(input) {
   const file = input.files && input.files[0];
+  input.value = '';
   if (!file) return;
   const info = document.getElementById('info-foto');
-  const img = new Image();
-  const url = URL.createObjectURL(file);
-  img.onload = function () {
-    const maxSide = 1280, scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-    const c = document.createElement('canvas');
-    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    fotoMime = 'image/jpeg';
-    fotoBase64 = c.toDataURL('image/jpeg', 0.85).split(',')[1];
-    URL.revokeObjectURL(url);
-    info.style.display = 'block';
-    info.textContent = '📷 Foto siap: ' + file.name;
-  };
-  img.onerror = function () { URL.revokeObjectURL(url); toast('Foto tidak bisa dibaca. Coba foto lain.'); };
-  img.src = url;
-  input.value = '';
+  const nama = file.name.toLowerCase();
+  const isImg = file.type.startsWith('image/');
+  const isPdf = file.type === 'application/pdf' || nama.endsWith('.pdf');
+  const isTeks = file.type.startsWith('text/') || /\.(txt|csv)$/.test(nama);
+  if (!isImg && !isPdf && !isTeks) { toast('Format belum didukung. Pakai foto, PDF, TXT, atau CSV.'); return; }
+  if (!isImg && file.size > MAX_UPLOAD) { toast('File terlalu besar (maksimal 8 MB).'); return; }
+
+  fotoBase64 = ''; teksFile = '';
+  info.style.display = 'block';
+  info.textContent = '⏳ Memuat file: ' + file.name + '...';
+  const gagal = () => { info.style.display = 'none'; toast('File tidak bisa dibaca. Coba file lain.'); };
+
+  if (isTeks) {
+    const r = new FileReader();
+    r.onload = e => {
+      teksFile = '[ISI FILE ' + file.name + ']\n' + String(e.target.result).slice(0, 20000);
+      info.textContent = '📄 Teks siap: ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
+    };
+    r.onerror = gagal;
+    r.readAsText(file);
+  } else if (isPdf) {
+    const r = new FileReader();
+    r.onload = e => {
+      fotoBase64 = String(e.target.result).split(',')[1];
+      fotoMime = 'application/pdf';
+      info.textContent = '📄 PDF siap: ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB)';
+    };
+    r.onerror = gagal;
+    r.readAsDataURL(file);
+  } else {
+    // Foto: perkecil dulu (maks 1280px, JPEG) supaya upload cepat & hemat kuota
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function () {
+      const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      fotoMime = 'image/jpeg';
+      fotoBase64 = c.toDataURL('image/jpeg', 0.85).split(',')[1];
+      URL.revokeObjectURL(url);
+      info.textContent = '📷 Foto siap: ' + file.name + ' (' + Math.round(fotoBase64.length * 0.75 / 1024) + ' KB)';
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); gagal(); };
+    img.src = url;
+  }
 }
 
 // Suara: Web Speech API (Chrome/Android). Jika tidak ada, pakai mikrofon keyboard.
@@ -253,8 +286,9 @@ async function muatData() {
 }
 
 async function prosesSemua() {
-  const teks = document.getElementById('input-santai').value;
-  if (!teks.trim() && !fotoBase64) { toast('Ketik catatan atau pilih foto dulu.'); return; }
+  const teksKetik = document.getElementById('input-santai').value;
+  if (!teksKetik.trim() && !fotoBase64 && !teksFile) { toast('Ketik catatan atau pilih file/foto dulu.'); return; }
+  const teks = teksFile ? (teksKetik + '\n\n' + teksFile).trim() : teksKetik;
   const btn = document.getElementById('btn-kirim');
   const saranBox = document.getElementById('kotak-saran');
   btn.textContent = '⏳ MEMPROSES...'; btn.disabled = true;
@@ -264,7 +298,7 @@ async function prosesSemua() {
       body: JSON.stringify({ teks, image_base64: fotoBase64, mime_type: fotoMime })
     });
     document.getElementById('input-santai').value = '';
-    fotoBase64 = '';
+    fotoBase64 = ''; teksFile = '';
     document.getElementById('info-foto').style.display = 'none';
     const h = data.hasil;
     saranBox.style.display = 'block';

@@ -4,8 +4,8 @@ Aplikasi web (PWA, *Neo-Brutalism UI*) yang mengubah catatan bahasa sehari-hari 
 rekap pengeluaran, pengingat jadwal, dan catatan — dengan sensor privasi otomatis sebelum data dikirim ke AI.
 
 ## ✨ Fitur
-- **Input pintar:** ketik santai ("Ganti oli 65rb, ingatkan servis 2 bulan lagi"), scan foto nota, atau dikte suara.
-- **Privacy guardrail:** nomor HP, email, dan nomor rekening/NIK disensor sebelum dikirim ke AI.
+- **Input pintar:** ketik santai ("Ganti oli 65rb, ingatkan servis 2 bulan lagi"), upload foto/galeri, PDF, file TXT/CSV, atau dikte suara.
+- **Privacy guardrail:** nomor HP, email, dan nomor rekening/NIK disensor sebelum dikirim ke AI (teks & isi TXT/CSV; foto dan PDF dikirim apa adanya).
 - **Cadangan offline:** bila AI/internet bermasalah, catatan teks tetap diproses parser lokal.
 - **Dashboard:** total pengeluaran (keseluruhan & bulan ini), jadwal berkode warna, catatan, ekspor CSV (Excel).
 - **Tanya memori:** "Berapa pengeluaran makan bulan ini?" dijawab dari data Anda sendiri.
