@@ -1,38 +1,32 @@
-import os, sys, base64, requests
+"""AI Co-Pilot terminal.  Pakai: python copilot.py 'pertanyaan' [file1 file2 ...]"""
+import os
+import sys
 
-if os.path.exists(".env"):
-    for line in open(".env"):
-        if "=" in line and not line.startswith("#"):
-            k, v = line.strip().split("=", 1)
-            os.environ[k] = v
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+from core.gemini import GeminiError, generate  # noqa: E402
 
-API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+MAX_FILE = 60_000  # karakter per file
+
 
 def tanya_ai(perintah, isi_file=""):
-    if len(API_KEY) < 10:
-        return "ERROR: GEMINI_API_KEY di .env masih kosong."
-    prompt = f"Kamu Senior Software Architect di Termux. Jawab singkat dan langsung ke solusi kode.\n\n{isi_file}\n\nPermintaan: {perintah}"
-    
-    # Alamat resmi server Gemini disandikan Base64 agar tidak terpotong clipboard/chat
-    b64_endpoint = "aHR0cHM6Ly9nZW5lcmF0aXZlbGFuZ3VhZ2UuZ29vZ2xlYXBpcy5jb20vdjFiZXRhL21vZGVscy9nZW1pbmktMy41LWZsYXNoLWxpdGU6Z2VuZXJhdGVDb250ZW50"
-    endpoint = base64.b64decode(b64_endpoint).decode("utf-8")
-    url_lengkap = f"{endpoint}?key={API_KEY}"
-    
+    prompt = ("Kamu Senior Software Architect. Jawab singkat dan langsung ke solusi kode, "
+              f"dalam bahasa Indonesia.\n\n{isi_file}\n\nPermintaan: {perintah}")
     try:
-        res = requests.post(url_lengkap, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=15)
-        data = res.json()
-        if "candidates" in data:
-            return data["candidates"][0]["content"]["parts"][0]["text"]
-        return f"Respon API: {data}"
-    except Exception as e:
-        return f"Gagal koneksi: {e}"
+        return generate([{"text": prompt}], timeout=60)
+    except GeminiError as e:
+        return f"ERROR: {e}"
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Pakai: python copilot.py 'pertanyaan' [file_opsional]")
+        print("Pakai: python copilot.py 'pertanyaan' [file_opsional ...]")
         sys.exit(0)
     konteks = ""
-    if len(sys.argv) >= 3 and os.path.exists(sys.argv):
-        konteks = f"ISI FILE {sys.argv}:\n" + open(sys.argv).read()
+    for path in sys.argv[2:]:
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8", errors="replace") as f:
+                konteks += f"ISI FILE {path}:\n{f.read(MAX_FILE)}\n\n"
+        else:
+            print(f"(file tidak ditemukan, dilewati: {path})")
     print("\n🤖 AI Co-Pilot:\n")
-    print(tanya_ai(sys.argv, konteks))
+    print(tanya_ai(sys.argv[1], konteks))

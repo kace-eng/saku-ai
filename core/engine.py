@@ -2,13 +2,19 @@ import hashlib
 import json
 import re
 import sqlite3
+import os
+import sys
 import time
 from typing import Dict, Any, List
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from core import config  # noqa: E402
+
 class SovereignEngine:
-    def __init__(self, db_path: str = "database/ledger.db", secret_salt: str = "KUNCI_ARSITEK_2026"):
-        self.db_path = db_path
-        self.secret_salt = secret_salt
+    def __init__(self, db_path: str = None, secret_salt: str = None):
+        self.db_path = db_path or config.LEDGER_DB
+        self.secret_salt = secret_salt or config.ledger_salt()
+        os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
         self._init_db()
 
     def _init_db(self):
@@ -54,12 +60,13 @@ class SovereignEngine:
         return {"valid": True, "reason": "Distribusi angka alami."}
 
     # STEP 1.2: Simpan Permanen ke Rantai Kriptografi SQLite
-    def record_decision(self, actor: str, context: str, numbers: List[float] = None) -> Dict[str, Any]:
+    def record_decision(self, actor: str, context: str, numbers: List[float] = None,
+                        enforce_audit: bool = True) -> Dict[str, Any]:
         numbers = numbers or []
         clean_text = self.sanitize_privacy(context)
         num_check = self.audit_numbers(numbers)
 
-        if not num_check["valid"]:
+        if enforce_audit and not num_check["valid"]:
             return {"status": "DITOLAK", "alasan": num_check["reason"], "teks_tersensor": clean_text}
 
         with sqlite3.connect(self.db_path) as conn:
@@ -100,8 +107,12 @@ class SovereignEngine:
                     return f"BAHAYA! Data dimanipulasi di Blok #{idx}"
         return f"AMAN 100%: Semua {len(rows)} blok database utuh dan terverifikasi."
 
+    def verify_ok(self) -> bool:
+        return self.verify_database().startswith("AMAN")
+
 if __name__ == "__main__":
-    engine = SovereignEngine()
+    import tempfile
+    engine = SovereignEngine(db_path=os.path.join(tempfile.mkdtemp(), "uji.db"))
     print("--- UJI 1: DATA KARANGAN ---")
     print(json.dumps(engine.record_decision("Budi", "Laporan kas", [100000, 200000, 500000, 300000]), indent=2))
     

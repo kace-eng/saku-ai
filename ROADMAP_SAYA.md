@@ -12,7 +12,8 @@ Tujuan Utama: Menguasai 3 Peran Masa Depan (System & AI Builder, Quality & Secur
 
 ## FASE 3: SINKRONISASI MULTI-PERANGKAT & NOTIFIKASI -> [SEDANG BERJALAN]
 - [ ] Step 3.1: Sinkronisasi kode HP (Termux) <-> Laptop (VS Code) via GitHub
-- [ ] Step 3.2: Tambah fitur PWA / APK Android atau Bot Telegram
+- [x] Step 3.2a: PWA (manifest, service worker, ikon PNG)
+- [ ] Step 3.2b: APK Android atau Bot Telegram
 - [ ] Step 3.3: Uji pemakaian harian & evaluasi penghematan
 
 ## FASE 4: PORTOFOLIO & PENGEMBANGAN LANJUTAN

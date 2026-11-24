@@ -6,6 +6,8 @@
 <title>SakuAI — Otak Kedua</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#facc15">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <style>
 * { box-sizing: border-box; font-family: 'Courier New', monospace; }
 body { background: #fdf6e3; background-image: radial-gradient(#cbd5e1 1.5px, transparent 1.5px); background-size: 18px 18px; color: #111; padding: 14px 14px 90px; max-width: 480px; margin: auto; }
@@ -38,6 +40,11 @@ th { background: #111; color: #fff; }
 .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: auto; background: #fff; border-top: 3px solid #111; display: flex; padding: 8px; gap: 6px; z-index: 99; }
 .nav-item { flex: 1; background: #f1f5f9; border: 2px solid #111; border-radius: 10px; padding: 8px 2px; font-weight: 900; font-size: 10px; text-align: center; cursor: pointer; box-shadow: 2px 2px 0 #111; }
 .nav-item.active { background: #facc15; transform: translateY(-2px); }
+.btn-del { background: #fff; border: 2px solid #111; border-radius: 6px; padding: 2px 6px; font-weight: 900; font-size: 10px; cursor: pointer; }
+.btn-voice.rec { background: #f87171; }
+#toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: #111; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 12px; font-weight: bold; max-width: 90%; z-index: 200; display: none; }
+.empty { font-size: 12px; font-weight: bold; }
+.month-total { font-size: 11px; font-weight: bold; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -46,9 +53,10 @@ th { background: #111; color: #fff; }
   <div class="card">
     <span class="badge">BERANDA • V3.0</span>
     <h1>RINGKASAN HARI INI</h1>
-    <div style="display:flex;gap:6px;margin-bottom:12px;"><input type="text" id="tanya-db" placeholder="Tanya memori: Kapan ganti oli?" style="flex:1;padding:10px;border:3px solid #111;border-radius:10px;font-weight:bold;font-size:12px;"><button onclick="cariMemori()" style="background:#facc15;border:3px solid #111;border-radius:10px;padding:0 12px;font-weight:900;cursor:pointer;box-shadow:3px 3px 0 #111;">🔍</button></div><div id="hasil-memori" style="background:#e0f2fe;border:2px dashed #111;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;font-weight:bold;display:none;"></div><div class="stat-box">
+    <div style="display:flex;gap:6px;margin-bottom:12px;"><input type="text" id="tanya-db" onkeydown="if(event.key==='Enter')cariMemori()" placeholder="Tanya memori: Kapan ganti oli?" style="flex:1;padding:10px;border:3px solid #111;border-radius:10px;font-weight:bold;font-size:12px;"><button onclick="cariMemori()" id="btn-tanya" style="background:#facc15;border:3px solid #111;border-radius:10px;padding:0 12px;font-weight:900;cursor:pointer;box-shadow:3px 3px 0 #111;">🔍</button></div><div id="hasil-memori" style="background:#e0f2fe;border:2px dashed #111;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;font-weight:bold;display:none;"></div><div class="stat-box">
       <div style="font-size:11px;font-weight:900;">TOTAL PENGELUARAN</div>
       <div class="stat-val" id="home-total">Rp 0</div>
+      <div class="month-total" id="home-month">Bulan ini: Rp 0</div>
     </div>
     <div class="grid-2">
       <div class="mini-card" onclick="bukaLayer('layer-tasks', 'nav-tasks')">
@@ -73,7 +81,7 @@ th { background: #111; color: #fff; }
     <textarea id="input-santai" rows="4" placeholder="Ketik santai: 'Ganti oli 65rb, ingatkan servis 2 bulan lagi' atau simpan ide catatan..."></textarea>
     <div id="info-foto" style="font-size:11px;font-weight:bold;color:#be185d;margin-top:6px;display:none;"></div>
     <div class="row-btns">
-      <label class="btn-pink">📎 UPLOAD FILE / FOTO<input type="file" accept="image/*,.pdf,.txt,.csv" style="display:none;" onchange="siapkanFoto(this)"></label>
+      <label class="btn-pink">📷 SCAN STRUK / NOTA<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="siapkanFoto(this)"></label>
       <button type="button" class="btn-voice" onclick="mulaiSuara()">🎤 SUARA</button>
     </div>
     <button class="btn-green" id="btn-kirim" onclick="prosesSemua()">⚡ PROSES OTOMATIS AI</button>
@@ -96,13 +104,15 @@ th { background: #111; color: #fff; }
     <h1>REKAP PENGELUARAN</h1>
     <div style="overflow-x:auto;">
       <table>
-        <thead><tr><th>Tgl</th><th>Kategori</th><th>Item</th><th>Nominal</th></tr></thead>
+        <thead><tr><th>Tgl</th><th>Kategori</th><th>Item</th><th>Nominal</th><th></th></tr></thead>
         <tbody id="tabel-pengeluaran"></tbody>
       </table>
     </div>
     <a href="/export-csv" class="btn-csv">📥 UNDUH EXCEL (.CSV)</a>
   </div>
 </div>
+
+<div id="toast"></div>
 
 <div class="bottom-nav">
   <div class="nav-item active" id="nav-home" onclick="bukaLayer('layer-home', 'nav-home')">🏠<br>BERANDA</div>
@@ -114,11 +124,31 @@ th { background: #111; color: #fff; }
 let fotoBase64 = "";
 let fotoMime = "image/jpeg";
 
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rp = n => 'Rp ' + Math.round(Number(n) || 0).toLocaleString('id-ID');
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.style.display = 'none', 3500);
+}
+
+async function api(url, opts) {
+  let res;
+  try { res = await fetch(url, opts); }
+  catch (e) { throw new Error('Server tidak terjangkau. Pastikan server SakuAI masih berjalan.'); }
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(data.pesan || ('Terjadi kesalahan (' + res.status + ')'));
+  return data;
+}
+
 function bukaLayer(idLayer, idNav) {
   document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.getElementById(idLayer).classList.add('active');
   document.getElementById(idNav).classList.add('active');
+  window.scrollTo(0, 0);
 }
 
 function gantiSub(tab) {
@@ -128,128 +158,132 @@ function gantiSub(tab) {
   document.getElementById('sub-note').classList.toggle('active', tab === 'note');
 }
 
+// Foto: perkecil dulu (maks 1280px, JPEG) supaya upload cepat & hemat kuota
 function siapkanFoto(input) {
-  const file = input.files;
+  const file = input.files && input.files[0];
   if (!file) return;
   const info = document.getElementById('info-foto');
-  info.style.display = 'block';
-  info.textContent = "⏳ Memuat file: " + file.name + "...";
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    if (file.type.startsWith('image/')) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const maxW = 1024;
-        const scale = img.width > maxW ? maxW / img.width : 1;
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-        fotoBase64 = dataUrl.split(',');
-        fotoMime = 'image/jpeg';
-        info.textContent = "📷 Foto siap: " + file.name + " (" + Math.round(fotoBase64.length / 1024) + " KB)";
-      };
-      img.src = e.target.result;
-    } else {
-      fotoBase64 = e.target.result.split(',');
-      fotoMime = file.type || 'application/pdf';
-      info.textContent = "📄 Dokumen siap: " + file.name + " (" + Math.round(file.size / 1024) + " KB)";
-    }
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = function () {
+    const maxSide = 1280, scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    fotoMime = 'image/jpeg';
+    fotoBase64 = c.toDataURL('image/jpeg', 0.85).split(',')[1];
+    URL.revokeObjectURL(url);
+    info.style.display = 'block';
+    info.textContent = '📷 Foto siap: ' + file.name;
   };
-  reader.readAsDataURL(file);
+  img.onerror = function () { URL.revokeObjectURL(url); toast('Foto tidak bisa dibaca. Coba foto lain.'); };
+  img.src = url;
+  input.value = '';
 }
 
+// Suara: Web Speech API (Chrome/Android). Jika tidak ada, pakai mikrofon keyboard.
+let rec = null;
 function mulaiSuara() {
   const box = document.getElementById('input-santai');
-  box.focus();
-  alert("Ketuk ikon mikrofon (🎤) di keyboard HP Anda untuk mulai mendikte suara.");
+  const btn = document.querySelector('.btn-voice');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { box.focus(); toast('Browser ini belum mendukung suara. Pakai ikon mikrofon di keyboard HP.'); return; }
+  if (rec) { rec.stop(); return; }
+  rec = new SR();
+  rec.lang = 'id-ID'; rec.interimResults = false;
+  rec.onstart = () => { btn.classList.add('rec'); btn.textContent = '⏹ STOP'; };
+  rec.onresult = e => {
+    const t = Array.from(e.results).map(r => r[0].transcript).join(' ');
+    box.value = (box.value ? box.value + ' ' : '') + t;
+  };
+  rec.onerror = e => toast('Suara gagal: ' + e.error);
+  rec.onend = () => { rec = null; btn.classList.remove('rec'); btn.textContent = '🎤 SUARA'; };
+  rec.start();
 }
 
 async function cariMemori() {
-  const q = document.getElementById("tanya-db").value;
+  const q = document.getElementById('tanya-db').value;
   if (!q.trim()) return;
-  const box = document.getElementById("hasil-memori");
-  box.style.display = "block";
-  box.textContent = "⏳ Mencari ingatan...";
-  const r = await fetch("/tanya-memori", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pertanyaan: q })
-  });
-  const d = await r.json();
-  box.textContent = "🧠 " + d.jawaban;
+  const box = document.getElementById('hasil-memori');
+  box.style.display = 'block'; box.textContent = '⏳ Mencari ingatan...';
+  try {
+    const d = await api('/tanya-memori', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pertanyaan: q }) });
+    box.textContent = '🧠 ' + d.jawaban;
+  } catch (e) { box.textContent = '⚠️ ' + e.message; }
+}
+
+function labelSisa(d) {
+  if (d < 0) return Math.abs(d) + ' hari terlambat';
+  if (d === 0) return 'HARI INI';
+  return d + ' hari lagi';
 }
 
 async function muatData() {
-  const res = await fetch('/dashboard-data');
-  const data = await res.json();
-  document.getElementById('home-total').textContent = 'Rp ' + data.total_pengeluaran.toLocaleString('id-ID');
+  let data;
+  try { data = await api('/dashboard-data'); }
+  catch (e) { toast(e.message); return; }
+
+  document.getElementById('home-total').textContent = rp(data.total_pengeluaran);
+  document.getElementById('home-month').textContent = 'Bulan ini: ' + rp(data.total_bulan_ini);
   document.getElementById('home-rem-count').textContent = data.pengingat.length;
   document.getElementById('home-note-count').textContent = data.catatan.length;
 
   const urgentBox = document.getElementById('home-urgent-box');
-  if (!data.pengingat.length) {
-    urgentBox.innerHTML = '<div style="font-size:12px;font-weight:bold;padding:8px;background:#f1f5f9;border:2px solid #111;border-radius:8px;">Semua jadwal aman terkendali!</div>';
-  } else {
-    const top = data.pengingat;
-    urgentBox.innerHTML = `<div class="rem-item soon" style="margin-bottom:0;"><div><b>${top.judul}</b><br><span style="font-size:11px;">Target: ${top.jatuh_tempo} (${top.sisa_hari} hari lagi)</span></div></div>`;
-  }
+  urgentBox.innerHTML = !data.pengingat.length
+    ? '<div class="empty" style="padding:8px;background:#f1f5f9;border:2px solid #111;border-radius:8px;">Semua jadwal aman terkendali!</div>'
+    : data.pengingat.slice(0, 3).map(t => {
+        const kls = t.sisa_hari <= 1 ? 'urgent' : (t.sisa_hari <= 7 ? 'soon' : 'safe');
+        return `<div class="rem-item ${kls}" style="margin-bottom:8px;"><div><b>${esc(t.judul)}</b><br><span style="font-size:11px;">Target: ${esc(t.jatuh_tempo)} (${labelSisa(t.sisa_hari)})</span></div></div>`;
+      }).join('');
 
   document.getElementById('panel-rem').innerHTML = !data.pengingat.length
-    ? '<div class="card" style="font-size:12px;font-weight:bold;">Belum ada jadwal pengingat.</div>'
+    ? '<div class="card empty">Belum ada jadwal pengingat.</div>'
     : data.pengingat.map(r => {
-        let kls = r.sisa_hari <= 1 ? 'urgent' : (r.sisa_hari <= 7 ? 'soon' : 'safe');
-        return `<div class="rem-item ${kls}"><div><b>${r.judul}</b><br><span style="font-size:11px;">${r.jatuh_tempo} (${r.sisa_hari} hari lagi)</span></div><button class="btn-done" onclick="aksi('/selesai-pengingat/${r.id}')">✔ SELESAI</button></div>`;
+        const kls = r.sisa_hari <= 1 ? 'urgent' : (r.sisa_hari <= 7 ? 'soon' : 'safe');
+        return `<div class="rem-item ${kls}"><div><b>${esc(r.judul)}</b><br><span style="font-size:11px;">${esc(r.jatuh_tempo)} (${labelSisa(r.sisa_hari)})</span></div><button class="btn-done" onclick="aksi('/selesai-pengingat/${r.id}')">✔ SELESAI</button></div>`;
       }).join('');
 
   document.getElementById('panel-note').innerHTML = !data.catatan.length
-    ? '<div class="card" style="font-size:12px;font-weight:bold;">Belum ada catatan bebas.</div>'
-    : data.catatan.map(n => `<div class="rem-item note-bg"><div><span style="font-size:10px;">${n.tanggal}</span><br><b style="font-size:12px;">${n.isi}</b></div><button class="btn-done" onclick="aksi('/hapus-catatan/${n.id}')">🗑 HAPUS</button></div>`).join('');
+    ? '<div class="card empty">Belum ada catatan bebas.</div>'
+    : data.catatan.map(n => `<div class="rem-item note-bg"><div><span style="font-size:10px;">${esc(n.tanggal)}</span><br><b style="font-size:12px;">${esc(n.isi)}</b></div><button class="btn-done" onclick="aksi('/hapus-catatan/${n.id}')">🗑 HAPUS</button></div>`).join('');
 
-  document.getElementById('tabel-pengeluaran').innerHTML = data.pengeluaran.map(e => `<tr><td>${e.tanggal.slice(5)}</td><td><b>${e.kategori}</b></td><td>${e.keterangan}</td><td>Rp ${e.nominal.toLocaleString('id-ID')}</td></tr>`).join('');
+  document.getElementById('tabel-pengeluaran').innerHTML = !data.pengeluaran.length
+    ? '<tr><td colspan="5" class="empty">Belum ada pengeluaran tercatat.</td></tr>'
+    : data.pengeluaran.map(e => `<tr><td>${esc(String(e.tanggal).slice(5))}</td><td><b>${esc(e.kategori)}</b></td><td>${esc(e.keterangan)}</td><td>${rp(e.nominal)}</td><td><button class="btn-del" title="Hapus" onclick="hapusPengeluaran(${e.id})">✕</button></td></tr>`).join('');
 }
 
 async function prosesSemua() {
   const teks = document.getElementById('input-santai').value;
-  if (!teks.trim() && !fotoBase64) {
-    alert("Ketik catatan atau pilih file/foto terlebih dahulu.");
-    return;
-  }
+  if (!teks.trim() && !fotoBase64) { toast('Ketik catatan atau pilih foto dulu.'); return; }
   const btn = document.getElementById('btn-kirim');
   const saranBox = document.getElementById('kotak-saran');
-  btn.textContent = "⏳ AI SEDANG MEMBACA...";
-  btn.disabled = true;
-
+  btn.textContent = '⏳ MEMPROSES...'; btn.disabled = true;
   try {
-    const res = await fetch('/catat-pintar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const data = await api('/catat-pintar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teks, image_base64: fotoBase64, mime_type: fotoMime })
     });
-    const data = await res.json();
-    if (data.status === 'SUKSES') {
-      document.getElementById('input-santai').value = '';
-      fotoBase64 = '';
-      document.getElementById('info-foto').style.display = 'none';
-      saranBox.style.display = 'block';
-      saranBox.textContent = "🤖 " + (data.hasil.saran_singkat || "File berhasil diproses!");
-      await muatData();
-    } else {
-      alert(data.pesan);
-    }
-  } catch (err) {
-    alert("Gagal memproses file: " + err);
+    document.getElementById('input-santai').value = '';
+    fotoBase64 = '';
+    document.getElementById('info-foto').style.display = 'none';
+    const h = data.hasil;
+    saranBox.style.display = 'block';
+    saranBox.textContent = `🤖 ${h.saran_singkat || 'Tersimpan!'}  (${h.pengeluaran.length} pengeluaran, ${h.pengingat.length} jadwal, ${h.catatan.length} catatan)`;
+    await muatData();
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    btn.textContent = '⚡ PROSES OTOMATIS AI'; btn.disabled = false;
   }
-  btn.textContent = "⚡ PROSES OTOMATIS AI";
-  btn.disabled = false;
 }
 
 async function aksi(url) {
-  await fetch(url, { method: 'POST' });
+  try { await api(url, { method: 'POST' }); } catch (e) { toast(e.message); }
   muatData();
+}
+
+function hapusPengeluaran(id) {
+  if (confirm('Hapus pengeluaran ini?')) aksi('/hapus-pengeluaran/' + id);
 }
 
 muatData();
