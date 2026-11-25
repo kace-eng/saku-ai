@@ -45,6 +45,16 @@ th { background: #111; color: #fff; }
 #toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: #111; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 12px; font-weight: bold; max-width: 90%; z-index: 200; display: none; }
 .empty { font-size: 12px; font-weight: bold; }
 .month-total { font-size: 11px; font-weight: bold; margin-top: 4px; }
+.inp { width: 100%; padding: 9px; border: 3px solid #111; border-radius: 10px; font-weight: bold; font-size: 12px; background: #fff; }
+.btn-sm { background: #facc15; border: 3px solid #111; border-radius: 10px; padding: 9px 12px; font-weight: 900; font-size: 11px; cursor: pointer; box-shadow: 3px 3px 0 #111; white-space: nowrap; }
+.frm { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+.lbl { font-size: 10px; font-weight: 900; margin-top: 10px; text-transform: uppercase; }
+.bar { height: 14px; border: 2px solid #111; border-radius: 8px; background: #fff; overflow: hidden; margin-top: 4px; }
+.bar > i { display: block; height: 100%; background: #22c55e; }
+.bar > i.hampir { background: #fde047; } .bar > i.lewat { background: #f87171; }
+.item { border: 3px solid #111; border-radius: 12px; padding: 10px; margin-bottom: 10px; box-shadow: 3px 3px 0 #111; font-size: 12px; font-weight: bold; background: #fff; }
+.sub { font-size: 11px; font-weight: normal; margin-top: 3px; }
+.lv-Rawan { background: #f87171 !important; } .lv-Waspada { background: #fde047 !important; } .lv-Cukup { background: #86efac !important; } .lv-Kuat { background: #4ade80 !important; }
 </style>
 </head>
 <body>
@@ -57,6 +67,8 @@ th { background: #111; color: #fff; }
       <div style="font-size:11px;font-weight:900;">TOTAL PENGELUARAN</div>
       <div class="stat-val" id="home-total">Rp 0</div>
       <div class="month-total" id="home-month">Bulan ini: Rp 0</div>
+      <div class="month-total" id="home-income"></div>
+      <div class="month-total" id="home-runway"></div>
     </div>
     <div class="grid-2">
       <div class="mini-card" onclick="bukaLayer('layer-tasks', 'nav-tasks')">
@@ -110,6 +122,52 @@ th { background: #111; color: #fff; }
     </div>
     <a href="/export-csv" class="btn-csv">📥 UNDUH EXCEL (.CSV)</a>
   </div>
+  <div class="card">
+    <span class="badge">UANG MASUK</span>
+    <h1>PEMASUKAN</h1>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Tgl</th><th>Sumber</th><th>Nominal</th><th></th></tr></thead>
+        <tbody id="tabel-pemasukan"></tbody>
+      </table>
+    </div>
+    <div class="sub">Ketik di INPUT AI, contoh: "gaji masuk 3jt".</div>
+  </div>
+</div>
+
+<div id="layer-indeks" class="screen">
+  <div class="card">
+    <span class="badge">KEMANDIRIAN</span>
+    <h1>INDEKS KEMANDIRIAN</h1>
+    <div class="stat-box" id="ik-box">
+      <div style="font-size:11px;font-weight:900;">DANA ANDA BERTAHAN SEKITAR</div>
+      <div class="stat-val" id="ik-runway">—</div>
+      <div class="month-total" id="ik-level"></div>
+    </div>
+    <div id="ik-detail" style="font-size:12px;font-weight:bold;line-height:1.7;"></div>
+    <div class="lbl">Saldo saat ini (cek di rekening/dompet Anda)</div>
+    <div class="frm"><input class="inp" id="in-saldo" type="number" inputmode="numeric" placeholder="mis. 2500000"><button class="btn-sm" onclick="simpanPengaturan('saldo')">SIMPAN</button></div>
+    <div class="lbl">Pemasukan bulanan (opsional)</div>
+    <div class="frm"><input class="inp" id="in-pemasukan" type="number" inputmode="numeric" placeholder="mis. 3000000"><button class="btn-sm" onclick="simpanPengaturan('pemasukan')">SIMPAN</button></div>
+  </div>
+
+  <div class="card">
+    <span class="badge">BATAS ANGGARAN</span>
+    <h1>ANGGARAN BULAN INI</h1>
+    <div id="list-anggaran"></div>
+    <div class="frm">
+      <select class="inp" id="in-kat" style="flex:1.2;"><option>TOTAL</option><option>Makan</option><option>Transport</option><option>Servis</option><option>Belanja</option><option>Lainnya</option></select>
+      <input class="inp" id="in-batas" type="number" inputmode="numeric" placeholder="batas Rp" style="flex:1.5;">
+      <button class="btn-sm" onclick="simpanAnggaran()">SET</button>
+    </div>
+    <div class="sub">Isi batas 0 untuk menghapus. Notifikasi dikirim saat 80% dan 100%.</div>
+  </div>
+
+  <div class="card">
+    <span class="badge">BELAJAR OTOMATIS</span>
+    <h1>POLA TERDETEKSI</h1>
+    <div id="list-pola"></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -119,6 +177,7 @@ th { background: #111; color: #fff; }
   <div class="nav-item" id="nav-input" onclick="bukaLayer('layer-input', 'nav-input')">➕<br>INPUT AI</div>
   <div class="nav-item" id="nav-tasks" onclick="bukaLayer('layer-tasks', 'nav-tasks')">⏰<br>JADWAL</div>
   <div class="nav-item" id="nav-money" onclick="bukaLayer('layer-money', 'nav-money')">💸<br>KEUANGAN</div>
+  <div class="nav-item" id="nav-indeks" onclick="bukaLayer('layer-indeks', 'nav-indeks')">📊<br>INDEKS</div>
 </div>
 <script>
 let fotoBase64 = "";
@@ -151,6 +210,7 @@ function bukaLayer(idLayer, idNav) {
   document.getElementById(idLayer).classList.add('active');
   document.getElementById(idNav).classList.add('active');
   window.scrollTo(0, 0);
+  if (idLayer === 'layer-indeks') muatIndeks();
 }
 
 function gantiSub(tab) {
@@ -257,9 +317,11 @@ async function muatData() {
   catch (e) { toast(e.message); return; }
 
   document.getElementById('home-total').textContent = rp(data.total_pengeluaran);
-  document.getElementById('home-month').textContent = 'Bulan ini: ' + rp(data.total_bulan_ini);
+  document.getElementById('home-month').textContent = 'Keluar bulan ini: ' + rp(data.total_bulan_ini);
+  document.getElementById('home-income').textContent = data.total_pemasukan_bulan_ini > 0 ? 'Masuk bulan ini: ' + rp(data.total_pemasukan_bulan_ini) : '';
   document.getElementById('home-rem-count').textContent = data.pengingat.length;
   document.getElementById('home-note-count').textContent = data.catatan.length;
+  muatIndeks(true);
 
   const urgentBox = document.getElementById('home-urgent-box');
   urgentBox.innerHTML = !data.pengingat.length
@@ -280,9 +342,67 @@ async function muatData() {
     ? '<div class="card empty">Belum ada catatan bebas.</div>'
     : data.catatan.map(n => `<div class="rem-item note-bg"><div><span style="font-size:10px;">${esc(n.tanggal)}</span><br><b style="font-size:12px;">${esc(n.isi)}</b></div><button class="btn-done" onclick="aksi('/hapus-catatan/${n.id}')">🗑 HAPUS</button></div>`).join('');
 
+  document.getElementById('tabel-pemasukan').innerHTML = !data.pemasukan.length
+    ? '<tr><td colspan="4" class="empty">Belum ada pemasukan tercatat.</td></tr>'
+    : data.pemasukan.map(m => `<tr><td>${esc(String(m.tanggal).slice(5))}</td><td><b>${esc(m.sumber)}</b></td><td>+${rp(m.nominal)}</td><td><button class="btn-del" title="Hapus" onclick="hapusPemasukan(${m.id})">✕</button></td></tr>`).join('');
+
   document.getElementById('tabel-pengeluaran').innerHTML = !data.pengeluaran.length
     ? '<tr><td colspan="5" class="empty">Belum ada pengeluaran tercatat.</td></tr>'
     : data.pengeluaran.map(e => `<tr><td>${esc(String(e.tanggal).slice(5))}</td><td><b>${esc(e.kategori)}</b></td><td>${esc(e.keterangan)}</td><td>${rp(e.nominal)}</td><td><button class="btn-del" title="Hapus" onclick="hapusPengeluaran(${e.id})">✕</button></td></tr>`).join('');
+}
+
+function rupiahKecil(n) { return rp(n); }
+
+async function muatIndeks(untukBeranda) {
+  let d;
+  try { d = await api('/indeks'); } catch (e) { if (!untukBeranda) toast(e.message); return; }
+
+  // Beranda
+  document.getElementById('home-runway').textContent =
+    d.runway_hari === null ? '' : '🪫 Dana bertahan ±' + d.runway_hari + ' hari (' + d.level + ')';
+  if (untukBeranda) return;
+
+  // Indeks
+  const box = document.getElementById('ik-box');
+  box.className = 'stat-box' + (d.level ? ' lv-' + d.level : '');
+  document.getElementById('ik-runway').textContent = d.runway_hari === null ? '—' : d.runway_hari + ' HARI';
+  document.getElementById('ik-level').textContent = d.level ? 'Status: ' + d.level
+    : (d.saldo === null ? 'Isi saldo di bawah untuk mulai menghitung' : 'Catat pengeluaran dulu agar bisa dihitung');
+
+  const baris = [];
+  if (d.saldo !== null) baris.push('Sisa dana: <b>' + rp(d.saldo) + '</b>');
+  baris.push('Rata-rata pengeluaran: <b>' + rp(d.rata_harian) + '/hari</b>' + (d.hari_data && !d.data_cukup ? ' <i>(data baru ' + d.hari_data + ' hari, belum akurat)</i>' : ''));
+  if (d.pemasukan_bulan_ini > 0) baris.push('Pemasukan bulan ini: <b>' + rp(d.pemasukan_bulan_ini) + '</b>');
+  baris.push('Bulan ini: <b>' + rp(d.bulan_ini) + '</b> · proyeksi akhir bulan <b>' + rp(d.proyeksi_bulan) + '</b>');
+  if (d.tren_persen !== null) baris.push('Dibanding bulan lalu (' + rp(d.bulan_lalu) + '): <b>' + (d.tren_persen > 0 ? '▲ +' : '▼ ') + d.tren_persen + '%</b>');
+  if (d.rasio_tabungan !== null) baris.push('Perkiraan sisa pemasukan: <b>' + d.rasio_tabungan + '%</b>');
+  document.getElementById('ik-detail').innerHTML = baris.join('<br>');
+
+  document.getElementById('list-anggaran').innerHTML = !d.anggaran.length
+    ? '<div class="empty" style="margin-bottom:8px;">Belum ada batas anggaran.</div>'
+    : d.anggaran.map(a => `<div class="item"><div>${esc(a.kategori)}: ${rp(a.pakai)} / ${rp(a.batas)} (${a.persen}%)</div><div class="bar"><i class="${a.status}" style="width:${Math.min(100, a.persen)}%"></i></div><div class="sub">${a.status === 'lewat' ? '🚫 Terlampaui ' + rp(-a.sisa) : 'Sisa ' + rp(a.sisa)}</div></div>`).join('');
+
+  document.getElementById('list-pola').innerHTML = !d.pola.length
+    ? '<div class="empty">Belum ada pola. Pola muncul setelah item yang sama dicatat minimal 3 kali dengan selang waktu yang teratur (misal ganti oli).</div>'
+    : d.pola.map(p => `<div class="item"><div>🔁 ${esc(p.label)}</div><div class="sub">Tiap ±${p.interval_hari} hari · ${p.kali}x tercatat · rata-rata ${rp(p.rata_nominal)}<br>Berikutnya: <b>${esc(p.berikutnya)}</b> (${p.aktif ? labelSisa(p.sisa_hari) : 'tampaknya sudah berhenti'}) · keyakinan ${esc(p.keyakinan)}</div></div>`).join('');
+}
+
+async function simpanPengaturan(jenis) {
+  const el = document.getElementById(jenis === 'saldo' ? 'in-saldo' : 'in-pemasukan');
+  if (el.value === '') { toast('Isi angkanya dulu.'); return; }
+  try {
+    await api('/pengaturan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [jenis]: el.value }) });
+    el.value = ''; toast('Tersimpan ✔'); muatIndeks(); muatData();
+  } catch (e) { toast(e.message); }
+}
+
+async function simpanAnggaran() {
+  const kategori = document.getElementById('in-kat').value, batas = document.getElementById('in-batas').value;
+  if (batas === '') { toast('Isi batas anggaran dulu.'); return; }
+  try {
+    await api('/anggaran', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kategori, batas }) });
+    document.getElementById('in-batas').value = ''; toast('Anggaran tersimpan ✔'); muatIndeks();
+  } catch (e) { toast(e.message); }
 }
 
 async function prosesSemua() {
@@ -302,7 +422,11 @@ async function prosesSemua() {
     document.getElementById('info-foto').style.display = 'none';
     const h = data.hasil;
     saranBox.style.display = 'block';
-    saranBox.textContent = `🤖 ${h.saran_singkat || 'Tersimpan!'}  (${h.pengeluaran.length} pengeluaran, ${h.pengingat.length} jadwal, ${h.catatan.length} catatan)`;
+    let teksSaran = `🤖 ${h.saran_singkat || 'Tersimpan!'}  (${h.pengeluaran.length} pengeluaran, ${(h.pemasukan || []).length} pemasukan, ${h.pengingat.length} jadwal, ${h.catatan.length} catatan)`;
+    (data.pengingat_otomatis || []).forEach(p => { teksSaran += `\n🔁 Pengingat otomatis dibuat: ${p.judul} (${p.jatuh_tempo})`; });
+    (data.peringatan || []).forEach(a => { teksSaran += `\n${a.status === 'lewat' ? '🚫' : '⚠️'} Anggaran ${a.kategori} ${a.status === 'lewat' ? 'terlampaui' : 'hampir habis'} (${a.persen}%)`; });
+    saranBox.style.whiteSpace = 'pre-line';
+    saranBox.textContent = teksSaran;
     await muatData();
   } catch (e) {
     toast(e.message);
@@ -314,6 +438,10 @@ async function prosesSemua() {
 async function aksi(url) {
   try { await api(url, { method: 'POST' }); } catch (e) { toast(e.message); }
   muatData();
+}
+
+function hapusPemasukan(id) {
+  if (confirm('Hapus pemasukan ini? Saldo akan menyesuaikan.')) aksi('/hapus-pemasukan/' + id);
 }
 
 function hapusPengeluaran(id) {

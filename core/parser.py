@@ -7,6 +7,10 @@ UNIT = {"rb": 1_000, "ribu": 1_000, "k": 1_000, "jt": 1_000_000, "juta": 1_000_0
 AMOUNT_RE = re.compile(
     r"(?:rp\.?\s*)?(\d{1,3}(?:\.\d{3})+|\d+(?:[.,]\d+)?)\s*(rb|ribu|jt|juta|k)?\b", re.I)
 WAKTU_RE = re.compile(r"(\d+)\s*(hari|minggu|bulan)\s*lagi", re.I)
+MASUK_RE = re.compile(
+    r"\b(gaji|gajian|honor|bonus|thr|komisi|pemasukan|pendapatan|uang saku|(?:uang|transfer|dana|saldo) masuk|cair|"
+    r"terima (?:uang|gaji|transfer)|dapat (?:uang|gaji|transfer)|dikirimi|dikasih (?:uang|duit))\b", re.I)
+KELUAR_RE = re.compile(r"\b(bayar|beli|belanja|ganti|servis|isi)\b", re.I)
 REMIND_RE = re.compile(r"\b(ingatkan|ingetin|pengingat|reminder|jadwalkan)\b", re.I)
 
 KATEGORI = {
@@ -50,8 +54,8 @@ def _kategori(teks: str) -> str:
 
 def parse(teks: str, hari_ini: date = None) -> dict:
     hari_ini = hari_ini or date.today()
-    hasil = {"pengeluaran": [], "pengingat": [], "catatan": [], "saran_singkat": ""}
-    for klausa in re.split(r"[,;\n]|\bdan\b|\blalu\b|\bterus\b", teks):
+    hasil = {"pengeluaran": [], "pemasukan": [], "pengingat": [], "catatan": [], "saran_singkat": ""}
+    for klausa in re.split(r"(?<!\d),|,(?!\d)|[;\n]|\bdan\b|\blalu\b|\bterus\b", teks):  # koma desimal (1,5jt) tidak memotong
         klausa = klausa.strip(" .")
         if not klausa:
             continue
@@ -59,7 +63,11 @@ def parse(teks: str, hari_ini: date = None) -> dict:
         waktu = WAKTU_RE.search(klausa)
         ingat = REMIND_RE.search(klausa)
 
-        if nominal and not (ingat and waktu):
+        masuk = bool(nominal and MASUK_RE.search(klausa) and not KELUAR_RE.search(klausa))
+        if masuk:
+            sumber = (klausa[:span[0]] + klausa[span[1]:]).strip(" -:") or "Pemasukan"
+            hasil["pemasukan"].append({"sumber": sumber.capitalize(), "nominal": nominal})
+        elif nominal and not (ingat and waktu):
             ket = (klausa[:span[0]] + klausa[span[1]:]).strip(" -:") or klausa
             hasil["pengeluaran"].append({"kategori": _kategori(klausa), "keterangan": ket, "nominal": nominal})
         if ingat or waktu:
