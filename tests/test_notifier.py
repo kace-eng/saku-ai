@@ -24,3 +24,25 @@ def test_jadwal_dan_tanpa_dobel(tmp_path, monkeypatch):
     assert n.cek_sekali(pagi) == 4                            # 3 pengingat + ringkasan
     assert not any("Jauh" in s for s in sent)
     assert n.cek_sekali(pagi.replace(minute=30)) == 0         # tidak dobel
+
+
+def test_notifikasi_anggaran_dan_pola(tmp_path, monkeypatch):
+    from datetime import timedelta
+    n, sent = _siapkan(tmp_path, monkeypatch)
+    c = sqlite3.connect(config.APP_DB)
+    from core import indeks, skema
+    skema.pastikan(c)
+    indeks.atur_anggaran(c, "Makan", 100000)
+    hari = date.today()
+    c.execute("INSERT INTO pengeluaran (tanggal,kategori,keterangan,nominal) VALUES (?,?,?,?)", (hari.isoformat(), "Makan", "bakso", 90000))
+    for h in (54, 36, 18):
+        c.execute("INSERT INTO pengeluaran (tanggal,kategori,keterangan,nominal) VALUES (?,?,?,?)",
+                  ((hari - timedelta(days=h)).isoformat(), "Belanja", "token listrik", 100000))
+    c.commit(); c.close()
+    pagi = datetime.combine(hari, datetime.min.time()).replace(hour=9)
+    n.cek_sekali(pagi)
+    assert any("Anggaran Makan" in s for s in sent)
+    assert any("Pengingat otomatis" in s for s in sent)
+    jumlah = len(sent)
+    n.cek_sekali(pagi.replace(minute=30))
+    assert len(sent) == jumlah                      # tidak ada pengiriman ulang
