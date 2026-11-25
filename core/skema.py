@@ -13,6 +13,7 @@ TABEL = [
         id INTEGER PRIMARY KEY AUTOINCREMENT, tanggal TEXT, sumber TEXT, nominal REAL)""",
     "CREATE TABLE IF NOT EXISTS pengaturan (kunci TEXT PRIMARY KEY, nilai TEXT)",
     "CREATE TABLE IF NOT EXISTS anggaran (kategori TEXT PRIMARY KEY COLLATE NOCASE, batas REAL)",
+    "CREATE TABLE IF NOT EXISTS jejak_otomatis (kunci TEXT PRIMARY KEY, ts REAL, ringkas TEXT)",
     "CREATE TABLE IF NOT EXISTS pola_log (kunci TEXT PRIMARY KEY, dibuat_pada TEXT)",
     "CREATE TABLE IF NOT EXISTS notif_log (kunci TEXT PRIMARY KEY, dikirim_pada TEXT)",
 ]

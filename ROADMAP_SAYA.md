@@ -11,9 +11,12 @@ Tujuan Utama: Menguasai 3 Peran Masa Depan (System & AI Builder, Quality & Secur
 - [x] Step 2.3: Integrasi Gemini API untuk ekstraksi bahasa santai & AI Co-Pilot Terminal
 
 ## FASE 3: SINKRONISASI MULTI-PERANGKAT & NOTIFIKASI -> [SEDANG BERJALAN]
-- [ ] Step 3.1: Sinkronisasi kode HP (Termux) <-> Laptop (VS Code) via GitHub
+- [x] Step 3.1: Sinkronisasi kode HP (Termux) <-> Laptop (VS Code) via GitHub
 - [x] Step 3.2a: PWA (manifest, service worker, ikon PNG)
-- [ ] Step 3.2b: APK Android atau Bot Telegram
+- [x] Step 3.2b: Notifikasi native Android via Termux:API (pengganti Telegram)
+- [x] Step 3.2c: Deteksi pola berulang + pengingat otomatis (core/pola.py)
+- [x] Step 3.2e: Mode tanpa sentuh: nyala otomatis, penangkap notifikasi, catat suara
+- [x] Step 3.2d: Indeks Kemandirian, tren bulanan, batas anggaran (core/indeks.py)
 - [ ] Step 3.3: Uji pemakaian harian & evaluasi penghematan
 
 ## FASE 4: PORTOFOLIO & PENGEMBANGAN LANJUTAN

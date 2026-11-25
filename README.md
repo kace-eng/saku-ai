@@ -39,6 +39,18 @@ Notifikasi muncul langsung di bar notifikasi HP lewat **Termux:API**.
 Aturan notifikasi: H-3, H-1, hari H, lalu tiap hari bila terlambat; ringkasan pagi jam 07:00; pengingat otomatis dari pola; anggaran 80%/100% (sekali per bulan per kategori); peringatan dana menipis (maksimal seminggu sekali); senyap jam 22:00–06:00.
 Ubah lewat `.env`: `NOTIF_INTERVAL_MIN`, `NOTIF_SENYAP_MULAI`, `NOTIF_SENYAP_AKHIR`, `NOTIF_JAM_RINGKASAN`.
 
+## 🙌 Mode tanpa sentuh (HP bekerja sendiri)
+**1. Nyala otomatis + dijaga.** Sekali saja, dari folder proyek: `sh termux/pasang.sh`, lalu pasang **Termux:Boot** dan **Termux:Widget** (satu sumber dengan Termux) dan buka Termux:Boot sekali. Setelah itu SakuAI menyala sendiri saat HP hidup, dan setiap prosesnya dinyalakan ulang otomatis bila berhenti karena error. Log ada di `database/jalan.log`.
+
+**2. Catat suara satu ketukan.** Tambahkan widget *Termux:Widget* ke layar utama, pilih **SakuAI-catat-suara**. Ketuk, bicara ("bensin tiga puluh ribu"), selesai: hasil muncul sebagai notifikasi tanpa membuka aplikasi.
+
+**3. Penangkap transaksi otomatis (opsional, nonaktif secara bawaan).** Membaca notifikasi DANA/GoPay/m-banking Anda lalu mencatat pengeluaran dan pemasukan sendiri. Semuanya diproses lokal dengan aturan teks, **tanpa dikirim ke AI**.
+   1. Android: *Setelan → Aplikasi → Akses khusus → Akses notifikasi → aktifkan **Termux:API*** (izin ini diperlukan agar notifikasi bisa dibaca).
+   2. Munculkan notifikasi dari aplikasi bank/dompet Anda, lalu jalankan `python penangkap.py --daftar` untuk melihat **nama paket** yang tepat.
+   3. Isi `.env`: `AUTO_PAKET=id.dana,com.gojek.app` (sesuaikan hasil langkah 2), lalu jalankan ulang `sh start.sh`.
+   4. Setiap transaksi yang tercatat memunculkan notifikasi dengan tombol **BATALKAN**. Kode OTP, promo, transaksi gagal, top-up, dan saldo tidak pernah dicatat.
+   Uji aturan baca: `python penangkap.py --uji "Pembayaran berhasil Rp25.000 ke Indomaret"`.
+
 ## ⚙️ Pengaturan (`.env`)
 | Variabel | Fungsi | Bawaan |
 |---|---|---|
@@ -46,6 +58,8 @@ Ubah lewat `.env`: `NOTIF_INTERVAL_MIN`, `NOTIF_SENYAP_MULAI`, `NOTIF_SENYAP_AKH
 | `GEMINI_MODEL` | Model Gemini | `gemini-3.5-flash-lite` |
 | `HOST` / `PORT` | Alamat server | `127.0.0.1` / `8000` |
 | `LEDGER_SALT` | Garam hash ledger | nilai bawaan lama |
+| `AUTO_PAKET` | Paket aplikasi yang notifikasinya dibaca penangkap | kosong (nonaktif) |
+| `AUTO_INTERVAL_DETIK` | Selang pengecekan notifikasi | `30` |
 
 > ⚠️ Aplikasi belum memiliki login. Jangan set `HOST=0.0.0.0` di jaringan publik/WiFi umum.
 
@@ -75,6 +89,9 @@ core/pola.py     deteksi pola berulang + pengingat otomatis
 core/indeks.py   indeks kemandirian + anggaran
 core/skema.py    skema database
 notifier.py      pengingat otomatis (notifikasi Android via Termux:API)
+penangkap.py     catat transaksi otomatis dari notifikasi bank/e-wallet
+catat_suara.py   catat lewat suara dari widget layar utama
+core/notifparse.py  pembaca teks notifikasi transaksi
 start.sh         jalankan server + pengingat sekaligus
 web/             antarmuka PWA
 tests/           test otomatis (pytest)
